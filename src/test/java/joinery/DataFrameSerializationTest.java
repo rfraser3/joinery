@@ -50,6 +50,34 @@ public class DataFrameSerializationTest {
         df = DataFrame.readCsv(ClassLoader.getSystemResourceAsStream("serialization.csv"));
     }
 
+    /**
+     * Tests index preserved in CSV
+     */
+    @Test
+    public void testCheckCsvIndex()
+        throws IOException{
+        final File tmp = File.createTempFile(getClass().getName(), ".csv");
+        tmp.deleteOnExit();
+        final DataFrame<Object> original = new DataFrame<>("date", "long", "double", "bool", "string");
+        original.append(Arrays.asList(new Date(), 1L, 1.0, true, "test")); //added "1L" to front of list
+        original.writeCsv(tmp.getPath());
+//        System.out.println(original);
+        DataFrame outputDf = DataFrame.readCsv(tmp.getPath());
+//        System.out.println(outputDf);
+        int[] testArray = new int[]{0};
+//        Object outputDfSlice = outputDf.get(0,0);
+//        System.out.println(testArray[0]);
+//        System.out.println(outputDf.toString());
+//        System.out.println(outputDfSlice);
+        assertArrayEquals(
+                original.types().subList(0,1).toArray(),
+                DataFrame.readCsv(tmp.getPath()).types().subList(1,2).toArray()
+        );
+
+    }
+
+
+
     @Test(expected=FileNotFoundException.class)
     public void testReadCsvString()
     throws IOException {
@@ -71,7 +99,7 @@ public class DataFrameSerializationTest {
                 );
         }
     }
-    
+
     @Test
     public void testReadCsvNAInputStream()
     throws IOException {
@@ -89,7 +117,7 @@ public class DataFrameSerializationTest {
                 );
         }
     }
-    
+
     @Test
     public void testReadCsvNoHeaderInputStream()
     throws IOException {
@@ -125,7 +153,7 @@ public class DataFrameSerializationTest {
                 );
         }
     }
-    
+
     @Test
     public void testReadCsvTabInputStream()
     throws IOException {
@@ -161,19 +189,21 @@ public class DataFrameSerializationTest {
         df.writeCsv(new FileOutputStream(tmp));
         assertTrue(tmp.length() > 64);
     }
-
+    /**
+     * Updated to assume csvWrite() preserves index
+     */
     @Test
     public void testReadWriteCsvTypes()
     throws IOException {
         final File tmp = File.createTempFile(getClass().getName(), ".csv");
         tmp.deleteOnExit();
         final DataFrame<Object> original = new DataFrame<>("date", "long", "double", "bool", "string");
-        original.append(Arrays.asList(new Date(), 1L, 1.0, true, "test"));
+        original.append(Arrays.asList(new Date(), 1L, 1.0, true, "test")); //added "1L" to front of list
         original.writeCsv(tmp.getPath());
         assertArrayEquals(
                 original.types().toArray(),
-                DataFrame.readCsv(tmp.getPath()).types().toArray()
-            );
+                DataFrame.readCsv(tmp.getPath()).types().subList(1,6).toArray() //this is a hack! assumes CSVs dont have an index! updated to slice accordingly
+        );
     }
 
     @Test
@@ -276,7 +306,7 @@ public class DataFrameSerializationTest {
                 df.toString().split("\n").length
             );
     }
-    
+
     @Test
     public void testToStringEmptyHeader()
     throws IOException {

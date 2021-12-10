@@ -43,6 +43,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 
+import org.apache.commons.collections4.iterators.ArrayIterator;
 import org.apache.poi.hssf.usermodel.HSSFDataFormat;
 import org.apache.poi.hssf.usermodel.HSSFWorkbook;
 import org.apache.poi.ss.usermodel.Cell;
@@ -234,12 +235,12 @@ public class Serialization {
                 new URL(file).openStream() : new FileInputStream(file), separator, numDefault, naString, hasHeader);
     }
 
-    public static DataFrame<Object> readCsv(final InputStream input) 
+    public static DataFrame<Object> readCsv(final InputStream input)
     throws IOException {
         return readCsv(input, ",", NumberDefault.LONG_DEFAULT, null);
     }
 
-    public static DataFrame<Object> readCsv(final InputStream input, String separator, NumberDefault numDefault, String naString) 
+    public static DataFrame<Object> readCsv(final InputStream input, String separator, NumberDefault numDefault, String naString)
     throws IOException {
     	return readCsv(input,separator, numDefault,naString, true);
     }
@@ -290,14 +291,35 @@ public class Serialization {
         }
     }
 
-    public static <V> void writeCsv(final DataFrame<V> df, final String output)
+    public static <V> void writeCsv(final DataFrame<Object> df, final String output)
     throws IOException {
         writeCsv(df, new FileOutputStream(output));
     }
 
-    public static <V> void writeCsv(final DataFrame<V> df, final OutputStream output)
+    /**
+     * Writes a CSV from DataFrame
+     * @param DataFrame source of CSV
+     * @return void; writes CSV from DataFrame
+     * @throws IOException
+     */
+    public static <V> void writeCsv(DataFrame<V> df, final OutputStream output)
     throws IOException {
-        try (CsvListWriter writer = new CsvListWriter(new OutputStreamWriter(output), CsvPreference.STANDARD_PREFERENCE)) {
+
+        List<Object> ind = new ArrayList<>();
+        for (Object o : df.index()){
+            ind.add(o);
+        }
+
+        DataFrame<Object> dfTemp = new DataFrame<>();
+        dfTemp.add(ind);
+
+        DataFrame<Object> dfFinal = dfTemp.join((DataFrame<Object>) df);
+
+        df = (DataFrame<V>) dfFinal;
+
+
+        try (
+            CsvListWriter writer = new CsvListWriter(new OutputStreamWriter(output), CsvPreference.STANDARD_PREFERENCE)) {
             final String[] header = new String[df.size()];
             final Iterator<Object> it = df.columns().iterator();
             for (int c = 0; c < df.size(); c++) {
